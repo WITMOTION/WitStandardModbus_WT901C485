@@ -41,6 +41,8 @@ They are not used or needed when building with CMake and idf.py.
 
 https://wit-motion.yuque.com/wumwnr/ltst03/fcgkdor7dwsmlxke?singleDoc# 《ESP32_SDK快速上手》
 
+https://app.gitbook.com/s/7KeiQ2sbyWknusoV5r8U/wit-standard-modbus-protocol/sdk/esp32_sdk-quick-start
+
 
 
 
