@@ -1,3 +1,12 @@
+
+# Instruction
+
+The folder name is platform or language. Please find the corresponding folder according to your platform and programming language before using it
+
+## Matlab_SDK Development kit
+
+https://support-73.gitbook.io/witmotion-sdk/wit-standard-modbus-protocol/sdk/matlab_sdk-development-kit
+
 # 使用说明
 
 文件夹名称为平台或者变成语言，使用前请按照您的所属平台和和所用编程语言来找对对应的文件夹
@@ -7,13 +16,5 @@
 https://wit-motion.yuque.com/wumwnr/ltst03/wow74s?singleDoc# 《Matlab_SDK开发包》
 
 
-
-# Instruction
-
-The folder name is platform or language. Please find the corresponding folder according to your platform and programming language before using it
-
-## Documentation
-
-https://app.gitbook.com/s/7KeiQ2sbyWknusoV5r8U/wit-standard-modbus-protocol/sdk/matlab_sdk-development-kit
 
 
