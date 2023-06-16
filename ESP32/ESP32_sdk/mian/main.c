@@ -25,8 +25,9 @@
 
 #define ACC_UPDATE		0x01
 #define GYRO_UPDATE		0x02
-#define ANGLE_UPDATE	0x04
+#define ANGLE_UPDATE		0x04
 #define MAG_UPDATE		0x08
+#define TEMP_UPDATE		0x10
 #define READ_UPDATE		0x80
 static volatile char s_cDataUpdate = 0;
 const uint32_t c_uiBaud[10] = {0, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600};
@@ -70,7 +71,7 @@ static void Usart0_task(void *pvParameters)
 
 void app_main(void)
 {
-	float fAcc[3], fGyro[3], fAngle[3];
+	float fAcc[3], fGyro[3], fAngle[3], fTemp;
 	int i;
 
 	xTaskCreate(Usart0_task, "Usart0_task", 4096, NULL, 5, NULL);
@@ -84,7 +85,7 @@ void app_main(void)
 	AutoScanSensor();
 	while (1)
 	{
-		WitReadReg(AX, 12);
+		WitReadReg(AX, 13);
 		Delayms(500);
 		if(s_cDataUpdate)
 		{
@@ -94,6 +95,7 @@ void app_main(void)
 				fGyro[i] = sReg[GX+i] / 32768.0f * 2000.0f;
 				fAngle[i] = sReg[Roll+i] / 32768.0f * 180.0f;
 			}
+			fTemp = sReg[TEMP] / 100.0f;
 			if(s_cDataUpdate & ACC_UPDATE)
 			{
 				printf("acc:%.3f %.3f %.3f\r\n", fAcc[0], fAcc[1], fAcc[2]);
@@ -113,6 +115,11 @@ void app_main(void)
 			{
 				printf("mag:%d %d %d\r\n", sReg[HX], sReg[HY], sReg[HZ]);
 				s_cDataUpdate &= ~MAG_UPDATE;
+			}
+			if(s_cDataUpdate & TEMP_UPDATE)
+			{
+				printf("temp:%f\r\n", fTemp);
+				s_cDataUpdate &= ~TEMP_UPDATE;
 			}
 		}
 	}
@@ -253,6 +260,9 @@ static void SensorDataUpdata(uint32_t uiReg, uint32_t uiRegNum)
 //            case Pitch:
             case Yaw:
 				s_cDataUpdate |= ANGLE_UPDATE;
+            break;
+            case TEMP:
+				s_cDataUpdate |= TEMP_UPDATE;
             break;
             default:
 				s_cDataUpdate |= READ_UPDATE;
