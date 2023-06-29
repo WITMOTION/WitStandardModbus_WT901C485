@@ -74,27 +74,3 @@ class IProtocolResolver(metaclass=ABCMeta):
         :return:
         """
         pass
-
-    @abstractmethod
-    def AccelerationCalibration(self,deviceModel):
-        """
-        加计校准
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def BeginFiledCalibration(self,deviceModel):
-        """
-        开始磁场校准
-        :return:
-        """
-        pass
-
-    @abstractmethod
-    def EndFiledCalibration(self,deviceModel):
-        """
-        结束磁场校准
-        :return:
-        """
-        pass

@@ -7,8 +7,9 @@ from lib.protocol_resolver.interface.i_protocol_resolver import IProtocolResolve
     485协议解析器
 """
 
+
 class Protocol485Resolver(IProtocolResolver):
-    #region   计算CRC
+    # region   计算CRC Calculate CRC
     auchCRCHi = [
         0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
         0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
@@ -47,35 +48,37 @@ class Protocol485Resolver(IProtocolResolver):
         0x48, 0x49, 0x89, 0x4B, 0x8B, 0x8A, 0x4A, 0x4E, 0x8E, 0x8F, 0x4F, 0x8D, 0x4D, 0x4C, 0x8C,
         0x44, 0x84, 0x85, 0x45, 0x87, 0x47, 0x46, 0x86, 0x82, 0x42, 0x43, 0x83, 0x41, 0x81, 0x80,
         0x40]
-    #endregion  计算CRC
-    TempBytes=[]         # 临时数据列表
-    PackSize = 87        # 一包数据大小
-    gyroRange = 2000.0   # 角速度量程
-    accRange = 16.0      # 加速度量程
-    angleRange = 180.0   # 角度量程
-    TempFindValues=[]    # 读取指定寄存器返回的数据
-    TempReadRegCount = 0 # 读取寄存器个数
+    # endregion  计算CRC
+    TempBytes = []        # 临时数据列表 Temporary Data List
+    PackSize = 87         # 一包数据大小 Size of a packet of data
+    gyroRange = 2000.0    # 角速度量程 Angular velocity range
+    accRange = 16.0       # 加速度量程 Acceleration range
+    angleRange = 180.0    # 角度量程 Angle range
+    TempFindValues = []   # 读取指定寄存器返回的数据 Read the data returned by the specified register
+    TempReadRegCount = 0  # 读取寄存器个数 Read the number of registers
 
-    def get_crc(self,datas,dlen):
+    def get_crc(self, datas, dlen):
         """
         获取CRC校验
         :param datas:数据
         :param dlen:校验数据长度
         :return:
         """
-        tempH=0xff         #高 CRC 字节初始化
-        tempL=0xff         #低 CRC 字节初始化
-        for i in range(0,dlen):
-            tempIndex = (tempH^datas[i]) & 0xff
-            tempH = (tempL^self.auchCRCHi[tempIndex]) & 0xff
+        tempH = 0xff  # 高 CRC 字节初始化 High CRC byte initialization
+        tempL = 0xff  # 低 CRC 字节初始化 Low CRC byte initialization
+        for i in range(0, dlen):
+            tempIndex = (tempH ^ datas[i]) & 0xff
+            tempH = (tempL ^ self.auchCRCHi[tempIndex]) & 0xff
             tempL = self.auchCRCLo[tempIndex]
-        return (tempH<<8) | tempL
+        return (tempH << 8) | tempL
         pass
+
     def setConfig(self, deviceModel):
         pass
 
     def sendData(self, sendData, deviceModel):
         success_bytes = deviceModel.serialPort.write(sendData)
+
     def passiveReceiveData(self, data, deviceModel):
         """
         接收数据处理
@@ -86,26 +89,27 @@ class Protocol485Resolver(IProtocolResolver):
         global TempBytes
         for val in data:
             self.TempBytes.append(val)
-            if (self.TempBytes[0]!=deviceModel.ADDR):       #开头的字节不等于设备ID
-                del self.TempBytes[0]                       #去除第一个字节
+            if (self.TempBytes[0] != deviceModel.ADDR):     # 开头的字节不等于设备ID The starting byte is not equal to the device ID
+                del self.TempBytes[0]           # 去除第一个字节 Remove the first byte
                 continue
-            if (len(self.TempBytes)>2):
-                if ((self.TempBytes[1]==0x03)==False):            #第三个字节数值不等于0x03
-                    del self.TempBytes[0]                         #去除第一个字节
+            if (len(self.TempBytes) > 2):
+                if ((self.TempBytes[1] == 0x03) == False):  # 第三个字节数值不等于0x03 The third byte value is not equal to 0x03
+                    del self.TempBytes[0]       # 去除第一个字节 Remove the first byte
                     continue
-                tlen = len(self.TempBytes)                        #获取当前数据长度
-                if (tlen==self.TempBytes[2] + 5):                 #表示一个包的数据大小
-                    tempCrc = self.get_crc(self.TempBytes,tlen-2)      #获取CRC校验
-                    if ((tempCrc>>8) == self.TempBytes[tlen-2] and (tempCrc & 0xff) == self.TempBytes[tlen-1]):   #数据CRC校验通过
-                        if (self.PackSize==tlen):                 #获取加速度、角速度、角度
-                            self.get_data(self.TempBytes, deviceModel)      #结算数据
-                            deviceModel.dataProcessor.onUpdate(deviceModel) #触发数据更新事件
-                        self.get_find(self.TempBytes,deviceModel)
-                        self.TempBytes=[]                        #清除数据
-                    else:                                        #数据CRC校验未通过
-                        del self.TempBytes[0]                    #去除第一个字节
+                tlen = len(self.TempBytes)      # 获取当前数据长度 Obtain the current data length
+                if (tlen == self.TempBytes[2] + 5):         # 表示一个包的数据大小 Represents the data size of a package
+                    tempCrc = self.get_crc(self.TempBytes, tlen - 2)  # 获取CRC校验 Obtain CRC verification
+                    if ((tempCrc >> 8) == self.TempBytes[tlen - 2] and (tempCrc & 0xff) == self.TempBytes[
+                        tlen - 1]):             # 数据CRC校验通过 Data CRC verification passed
+                        if (self.PackSize == tlen):         # 获取加速度、角速度、角度 Obtain acceleration, angular velocity, and angle
+                            self.get_data(self.TempBytes, deviceModel)          # 结算数据 Settlement data
+                            deviceModel.dataProcessor.onUpdate(deviceModel)     # 触发数据更新事件 Trigger data update event
+                        self.get_find(self.TempBytes, deviceModel)
+                        self.TempBytes = []     # 清除数据 Clear data
+                    else:                       # 数据CRC校验未通过  Data CRC verification failed
+                        del self.TempBytes[0]   # 去除第一个字节 Remove the first byte
 
-    def get_readbytes(self,devid, regAddr,regCount):
+    def get_readbytes(self, devid, regAddr, regCount):
         """
         获取读取的指令
         :param devid: 设备ID
@@ -114,18 +118,18 @@ class Protocol485Resolver(IProtocolResolver):
         :return:
         """
         tempBytes = [None] * 8
-        tempBytes[0] = devid                            #设备ID
-        tempBytes[1] = 0x03                             #读取指令
-        tempBytes[2] = regAddr >> 8                     #寄存器起始位——高位
-        tempBytes[3] = regAddr & 0xff                   #寄存器起始位——低位
-        tempBytes[4] = regCount >> 8                    #寄存器个数——高位
-        tempBytes[5] = regCount & 0xff                  #寄存器个数——低位
-        tempCrc = self.get_crc(tempBytes,len(tempBytes)-2)   #获取CRC校验
-        tempBytes[6] = tempCrc >> 8                     #CRC校验——高位
-        tempBytes[7] = tempCrc & 0xff                   #CRC校验——低位
+        tempBytes[0] = devid    # 设备ID Device ID
+        tempBytes[1] = 0x03     # 读取指令 Read command
+        tempBytes[2] = regAddr >> 8     # 寄存器起始位——高位 Register start bit - high bit
+        tempBytes[3] = regAddr & 0xff   # 寄存器起始位——低位 Register start bit - low bit
+        tempBytes[4] = regCount >> 8    # 寄存器个数——高位 Number of registers - high bit
+        tempBytes[5] = regCount & 0xff  # 寄存器个数——低位 Number of registers - low bit
+        tempCrc = self.get_crc(tempBytes, len(tempBytes) - 2)  # 获取CRC校验 Obtain CRC verification
+        tempBytes[6] = tempCrc >> 8     # CRC校验——高位 CRC verification - high bit
+        tempBytes[7] = tempCrc & 0xff   # CRC校验——低位 CRC verification - low bit
         return tempBytes
 
-    def get_writebytes(self,devid, regAddr, sValue):
+    def get_writebytes(self, devid, regAddr, sValue):
         """
         获取写入的指令
         :param devid: 设备ID
@@ -134,86 +138,87 @@ class Protocol485Resolver(IProtocolResolver):
         :return:
         """
         tempBytes = [None] * 8
-        tempBytes[0] = devid                            #设备ID
-        tempBytes[1] = 0x06                             #写入指令
-        tempBytes[2] = regAddr >> 8                     #寄存器起始位——高位
-        tempBytes[3] = regAddr & 0xff                   #寄存器起始位——低位
-        tempBytes[4] = sValue >> 8                      #寄存器数值——高位
-        tempBytes[5] = sValue & 0xff                    #寄存器数值——低位
-        tempCrc = self.get_crc(tempBytes,len(tempBytes)-2)   #获取CRC校验
+        tempBytes[0] = devid    # 设备ID Device ID
+        tempBytes[1] = 0x06     # 写入指令 Write command
+        tempBytes[2] = regAddr >> 8     # 寄存器起始位——高位 Register start bit - high bit
+        tempBytes[3] = regAddr & 0xff   # 寄存器起始位——低位 Register start bit - low bit
+        tempBytes[4] = sValue >> 8      # 寄存器数值——高位 Register Value - High Bit
+        tempBytes[5] = sValue & 0xff    # 寄存器数值——低位 Register Value - low Bit
+        tempCrc = self.get_crc(tempBytes, len(tempBytes) - 2)  # 获取CRC校验 Obtain CRC verification
         tempBytes[6] = tempCrc >> 8
         tempBytes[7] = tempCrc & 0xff
         return tempBytes
 
-    def get_data(self,datahex, deviceModel):
+    def get_data(self, datahex, deviceModel):
         """
         结算数据
         :param datahex: 原始始数据包
         :param deviceModel: 设备模型
         :return:
         """
-        tempReg = 0x30                                                      #起始寄存器
-        dlen = int(datahex[2] / 2)                                          # 寄存器个数
-        tempVals = []                                                       # 临时数组
+        tempReg = 0x30      # 起始寄存器 Start register
+        dlen = int(datahex[2] / 2)  # 寄存器个数 Number of registers
+        tempVals = []       # 临时数组 Temporary array
         for i in range(0, dlen):
-            tempIndex = 3 + i * 2                                           #获取当前数据索引
-            tempVal = datahex[tempIndex] << 8 | datahex[tempIndex + 1]      #数据转换
-            if (tempReg>=0x30 and tempReg<=0x33):                           #芯片时间
+            tempIndex = 3 + i * 2   # 获取当前数据索引 Get current data index
+            tempVal = datahex[tempIndex] << 8 | datahex[tempIndex + 1]  # 数据转换 Data conversion
+            if 0x30 <= tempReg <= 0x33:                   # 芯片时间 Chip Time
                 tempVals.append(tempVal)
-                if (tempReg == 0x33):
-                    _year = 2000 + (tempVals[0] & 0xff)    # 年
-                    _moth = ((tempVals[0] >> 8) & 0xff)    # 月
-                    _day = (tempVals[1] & 0xff)            # 日
-                    _hour = ((tempVals[1] >> 8) & 0xff)    # 时
-                    _minute = (tempVals[2] & 0xff)         # 分
-                    _second = ((tempVals[2] >> 8) & 0xff)  # 秒
-                    _millisecond = tempVals[3]             # 毫秒
-                    deviceModel.setDeviceData("Chiptime", str(_year) +"-"+str(_moth) +"-"+str(_day) + " " + str(_hour) +":"+str(_minute)+":"+str(_second)+"."+str(_millisecond))         # 设备模型芯片时间赋值
-                    tempVals = []                                           # 清除数据
-            elif (tempReg>=0x34 and tempReg<=0x36):                         #加速度X Y Z
-                tempVal = tempVal / 32768.0 * self.accRange                 #加速度结算
+                if tempReg == 0x33:
+                    _year = 2000 + (tempVals[0] & 0xff)    # 年 Year
+                    _moth = ((tempVals[0] >> 8) & 0xff)    # 月 Month
+                    _day = (tempVals[1] & 0xff)            # 日 Day
+                    _hour = ((tempVals[1] >> 8) & 0xff)    # 时 Hour
+                    _minute = (tempVals[2] & 0xff)         # 分 Minute
+                    _second = ((tempVals[2] >> 8) & 0xff)  # 秒 Second
+                    _millisecond = tempVals[3]             # 毫秒 Millisecond
+                    deviceModel.setDeviceData("Chiptime", str(_year) + "-" + str(_moth) + "-" + str(_day) + " " + str(
+                        _hour) + ":" + str(_minute) + ":" + str(_second) + "." + str(_millisecond))  # 设备模型芯片时间赋值 Device model chip time assignment
+                    tempVals = []       # 清除数据 Clear data
+            elif (tempReg >= 0x34 and tempReg <= 0x36):    # 加速度X Y Z  ACC X Y Z
+                tempVal = tempVal / 32768.0 * self.accRange   # 加速度结算 Acceleration settlement
                 if tempVal >= self.accRange:
                     tempVal -= 2 * self.accRange
-                tempVals.append(round(tempVal,4))                           #加速度X Y Z赋值
-                if (tempReg==0x36):
-                    deviceModel.setDeviceData("accX",tempVals[0])           #设备模型加速度X赋值
-                    deviceModel.setDeviceData("accY", tempVals[1])          #设备模型加速度Y赋值
-                    deviceModel.setDeviceData("accZ", tempVals[2])          #设备模型加速度Z赋值
-                    tempVals = []                                           #清除数据
-            elif (tempReg == 0x40):                                         # 温度
-                temperature = round(tempVal/100.0,2)                       # 温度结算,并保留两位小数
-                deviceModel.setDeviceData("temperature", temperature)       # 设备模型温度赋值
-            elif (tempReg>=0x37 and tempReg<=0x39):                         #角速度X Y Z
-                tempVal = tempVal / 32768.0 * self.gyroRange                #角速度结算
+                tempVals.append(round(tempVal, 4))         # 加速度X Y Z赋值 Acceleration X Y Z assignment
+                if (tempReg == 0x36):
+                    deviceModel.setDeviceData("accX", tempVals[0])  # 设备模型加速度X赋值 Equipment model acceleration X assignment
+                    deviceModel.setDeviceData("accY", tempVals[1])  # 设备模型加速度Y赋值 Equipment model acceleration Y assignment
+                    deviceModel.setDeviceData("accZ", tempVals[2])  # 设备模型加速度Z赋值 Equipment model acceleration Z assignment
+                    tempVals = []  # 清除数据 Clear data
+            elif (tempReg == 0x40):  # 温度 Temperature
+                temperature = round(tempVal / 100.0, 2)  # 温度结算,并保留两位小数 Temperature settlement with two decimal places retained
+                deviceModel.setDeviceData("temperature", temperature)  # 设备模型温度赋值 Equipment model temperature assignment
+            elif (tempReg >= 0x37 and tempReg <= 0x39):  # 角速度X Y Z Angular velocity X Y Z
+                tempVal = tempVal / 32768.0 * self.gyroRange  # 角速度结算 Angular velocity settlement
                 if tempVal >= self.gyroRange:
                     tempVal -= 2 * self.gyroRange
-                tempVals.append(round(tempVal,4))                           #角速度X Y Z赋值
-                if (tempReg==0x39):
-                    deviceModel.setDeviceData("gyroX",tempVals[0])             #设备模型角速度X赋值
-                    deviceModel.setDeviceData("gyroY", tempVals[1])            #设备模型角速度Y赋值
-                    deviceModel.setDeviceData("gyroZ", tempVals[2])            #设备模型角速度Z赋值
-                    tempVals = []                                              # 清除数据
-            elif (tempReg>=0x3d and tempReg<=0x3f):                            #角度X Y Z
-                tempVal = tempVal / 32768.0 * self.angleRange                  #角度结算
+                tempVals.append(round(tempVal, 4))  # 角速度X Y Z赋值 Angular velocity X Y Z assignment
+                if (tempReg == 0x39):
+                    deviceModel.setDeviceData("gyroX", tempVals[0])  # 设备模型角速度X赋值 Equipment model angular velocity X assignment
+                    deviceModel.setDeviceData("gyroY", tempVals[1])  # 设备模型角速度Y赋值 Equipment model angular velocity Y assignment
+                    deviceModel.setDeviceData("gyroZ", tempVals[2])  # 设备模型角速度Z赋值 Equipment model angular velocity Z assignment
+                    tempVals = []  # 清除数据 Claer data
+            elif (tempReg >= 0x3d and tempReg <= 0x3f):  # 角度X Y Z  Angle X Y Z
+                tempVal = tempVal / 32768.0 * self.angleRange  # 角度结算 Angle settlement
                 if tempVal >= self.angleRange:
                     tempVal -= 2 * self.angleRange
-                tempVals.append(round(tempVal,3))                              #设备模型角度X Y Z赋值
-                if (tempReg==0x3f):
-                    deviceModel.setDeviceData("angleX",tempVals[0])            #设备模型角度X赋值
-                    deviceModel.setDeviceData("angleY", tempVals[1])           #设备模型角度Y赋值
-                    deviceModel.setDeviceData("angleZ", tempVals[2])           #设备模型角度Z赋值
-                    tempVals = []                                              # 清除数据
-            elif (tempReg >= 0x3a and tempReg <= 0x3c):                        # 磁场X Y Z
-                tempVals.append(round(tempVal,0))                              # 设备模型磁场X Y Z赋值
-                if (tempReg==0x3c):
-                    deviceModel.setDeviceData("magX",tempVals[0])              #设备模型磁场X赋值
-                    deviceModel.setDeviceData("magY", tempVals[1])             #设备模型磁场Y赋值
-                    deviceModel.setDeviceData("magZ", tempVals[2])             #设备模型磁场Z赋值
-                    tempVals = []                                              #清除数据
+                tempVals.append(round(tempVal, 3))  # 设备模型角度X Y Z赋值 Equipment model angle X Y Z assignment
+                if (tempReg == 0x3f):
+                    deviceModel.setDeviceData("angleX", tempVals[0])  # 设备模型角度X赋值 Equipment model angle X assignment
+                    deviceModel.setDeviceData("angleY", tempVals[1])  # 设备模型角度Y赋值 Equipment model angle Y assignment
+                    deviceModel.setDeviceData("angleZ", tempVals[2])  # 设备模型角度Z赋值 Equipment model angle Z assignment
+                    tempVals = []  # 清除数据 Clear data
+            elif (tempReg >= 0x3a and tempReg <= 0x3c):  # 磁场X Y Z Magnetic field X Y Z
+                tempVals.append(round(tempVal, 0))  # 设备模型磁场X Y Z赋值 Equipment model magnetic field X Y Z assignment
+                if (tempReg == 0x3c):
+                    deviceModel.setDeviceData("magX", tempVals[0])  # 设备模型磁场X赋值 Equipment model magnetic field X assignment
+                    deviceModel.setDeviceData("magY", tempVals[1])  # 设备模型磁场Y赋值 Equipment model magnetic field Y assignment
+                    deviceModel.setDeviceData("magZ", tempVals[2])  # 设备模型磁场Z赋值 Equipment model magnetic field Z assignment
+                    tempVals = []  # 清除数据 Clear data
 
-            tempReg+=1                                                         #下一个寄存器
+            tempReg += 1  # 下一个寄存器 Next reg
 
-    def readReg(self, regAddr,regCount, deviceModel):
+    def readReg(self, regAddr, regCount, deviceModel):
         """
         读取寄存器
         :param regAddr: 寄存器地址
@@ -221,17 +226,17 @@ class Protocol485Resolver(IProtocolResolver):
         :param deviceModel: 设备模型
         :return:
         """
-        self.TempFindValues = []                        #清除数据
+        self.TempFindValues = []   # 清除数据 Clear data
         self.TempReadRegCount = regCount
-        tempBytes = self.get_readbytes(deviceModel.ADDR,regAddr,regCount)         # 获取读取的指令
-        success_bytes = deviceModel.serialPort.write(tempBytes)  # 写入数据
-        for i in range(0, 15):  # 设置超时1秒
-            time.sleep(0.01)  # 休眠10毫秒
-            if (len(self.TempFindValues) > 0):  # 已返回所找查的寄存器的值
+        tempBytes = self.get_readbytes(deviceModel.ADDR, regAddr, regCount)  # 获取读取的指令 Get cmd
+        success_bytes = deviceModel.serialPort.write(tempBytes)  # 写入数据 Write data
+        for i in range(0, 15):     # 设置超时1秒 Set timeout of 1 second
+            time.sleep(0.01)       # 休眠10毫秒 sleep 100ms
+            if len(self.TempFindValues) > 0:   # 已返回所找查的寄存器的值 The value of the searched register has been returned
                 break
         return self.TempFindValues
 
-    def writeReg(self, regAddr,sValue, deviceModel):
+    def writeReg(self, regAddr, sValue, deviceModel):
         """
         写入寄存器
         :param regAddr: 寄存器地址
@@ -239,22 +244,22 @@ class Protocol485Resolver(IProtocolResolver):
         :param deviceModel: 设备模型
         :return:
         """
-        tempBytes = self.get_writebytes(deviceModel.ADDR,regAddr,sValue) #获取写入指令
-        success_bytes = deviceModel.serialPort.write(tempBytes)          #写入寄存器
+        tempBytes = self.get_writebytes(deviceModel.ADDR, regAddr, sValue)  # 获取写入指令 Get cmd
+        success_bytes = deviceModel.serialPort.write(tempBytes)  # 写入寄存器 Write reg
 
-    def get_find(self,datahex, deviceModel):
+    def get_find(self, datahex, deviceModel):
         """
         读取指定寄存器结算
         :param datahex: 原始始数据包
         :param deviceModel: 设备模型
         :return:
         """
-        tempArr = []                                                        #临时存储
-        dlen = int(datahex[2]/2)                                            #寄存器个数
-        for i in range(0,dlen):
-            tempIndex = 3 + i * 2                                           #获取当前数据索引
-            tempVal = datahex[tempIndex] << 8 | datahex[tempIndex + 1]      #数据转换
-            tempArr.append(tempVal)                                        #将数据添加到列表中
+        tempArr = []                 # 临时存储 Temporary Storage
+        dlen = int(datahex[2] / 2)   # 寄存器个数 Number of registers
+        for i in range(0, dlen):
+            tempIndex = 3 + i * 2    # 获取当前数据索引  Get current data index
+            tempVal = datahex[tempIndex] << 8 | datahex[tempIndex + 1]  # 数据转换 Data conversion
+            tempArr.append(tempVal)  # 将数据添加到列表中 Add data to the list
 
         self.TempFindValues.extend(tempArr)
 
@@ -263,17 +268,16 @@ class Protocol485Resolver(IProtocolResolver):
         解锁
         :return:
         """
-        tempBytes = self.get_writebytes(deviceModel.ADDR,0x69, 0xb588)  # 获取写入指令
-        success_bytes = deviceModel.serialPort.write(tempBytes)         # 写入寄存器
-
+        tempBytes = self.get_writebytes(deviceModel.ADDR, 0x69, 0xb588)  # 获取写入指令 Get cmd
+        success_bytes = deviceModel.serialPort.write(tempBytes)          # 写入寄存器 Write Register
 
     def save(self, deviceModel):
         """
         保存
         :return:
         """
-        tempBytes = self.get_writebytes(deviceModel.ADDR,0x00, 0x00)  # 获取写入指令
-        success_bytes = deviceModel.serialPort.write(tempBytes)       #写入寄存器
+        tempBytes = self.get_writebytes(deviceModel.ADDR, 0x00, 0x00)  # 获取写入指令 Get cmd
+        success_bytes = deviceModel.serialPort.write(tempBytes)        # 写入寄存器 Write Register
 
     def AccelerationCalibration(self, deviceModel):
         """
@@ -281,30 +285,29 @@ class Protocol485Resolver(IProtocolResolver):
         :param deviceModel: 设备模型
         :return:
         """
-        self.unlock(deviceModel)                                      # 解锁
-        time.sleep(0.1)                                               # 休眠100毫秒
-        tempBytes = self.get_writebytes(deviceModel.ADDR,0x01, 0x01)  # 获取写入指令
-        success_bytes = deviceModel.serialPort.write(tempBytes)       # 写入寄存器
-        time.sleep(5.5)                                               # 休眠5500毫秒
+        self.unlock(deviceModel)  # 解锁 Unlock
+        time.sleep(0.1)  # 休眠100毫秒  Sleep 100ms
+        tempBytes = self.get_writebytes(deviceModel.ADDR, 0x01, 0x01)  # 获取写入指令 Get cmd
+        success_bytes = deviceModel.serialPort.write(tempBytes)        # 写入寄存器 Write Register
+        time.sleep(5.5)  # 休眠5500毫秒 Sleep 5500ms
 
-    def BeginFiledCalibration(self,deviceModel):
+    def BeginFiledCalibration(self, deviceModel):
         """
         开始磁场校准
         :param deviceModel: 设备模型
         :return:
         """
-        self.unlock(deviceModel)                                         # 解锁
-        time.sleep(0.1)                                                  # 休眠100毫秒
-        tempBytes = self.get_writebytes(deviceModel.ADDR,0x01, 0x07)     # 获取写入指令 磁场校准
-        success_bytes = deviceModel.serialPort.write(tempBytes)          # 写入寄存器
+        self.unlock(deviceModel)  # 解锁 Unlock
+        time.sleep(0.1)           # 休眠100毫秒 Sleep 100ms
+        tempBytes = self.get_writebytes(deviceModel.ADDR, 0x01, 0x07)  # 获取写入指令 磁场校准 Obtain write command magnetic field calibration
+        success_bytes = deviceModel.serialPort.write(tempBytes)        # 写入寄存器 Write Register
 
-
-    def EndFiledCalibration(self,deviceModel):
+    def EndFiledCalibration(self, deviceModel):
         """
         结束磁场校准
         :param deviceModel: 设备模型
         :return:
         """
-        self.unlock(deviceModel)                                         # 解锁
-        time.sleep(0.1)                                                  # 休眠100毫秒
-        self.save(deviceModel)                                           # 保存
+        self.unlock(deviceModel)    # 解锁 Unlock
+        time.sleep(0.1)             # 休眠100毫秒 Sleep 100ms
+        self.save(deviceModel)      # 保存 Save

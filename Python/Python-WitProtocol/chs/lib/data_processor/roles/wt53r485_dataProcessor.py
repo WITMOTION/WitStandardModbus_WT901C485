@@ -2,11 +2,11 @@
 from lib.data_processor.interface.i_data_processor import IDataProcessor
 
 """
-    JY901S数据处理器 Data Processor
+    WT53R485数据处理器 Data Processor
 """
 
 
-class JY901SDataProcessor(IDataProcessor):
+class WT53R485DataProcessor(IDataProcessor):
     onVarChanged = []
     def onOpen(self, deviceModel):
         pass
@@ -16,5 +16,5 @@ class JY901SDataProcessor(IDataProcessor):
 
     @staticmethod
     def onUpdate(*args):
-        for fun in JY901SDataProcessor.onVarChanged:
+        for fun in WT53R485DataProcessor.onVarChanged:
             fun(*args)
