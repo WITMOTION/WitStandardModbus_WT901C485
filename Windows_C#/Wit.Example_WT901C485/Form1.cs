@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Wit.SDK.Device.Device.Device.DKey;
 using Wit.SDK.Modular.Sensor.Modular.DataProcessor.Constant;
 using Wit.SDK.Modular.WitSensorApi.Modular.WT901C485;
 
@@ -323,7 +324,7 @@ namespace Wit.Example_WT901C485
                 //WT901C485.SendProtocolData(Modbus16Utils.GetRead(WT901C485.GetModbusId(), 0x03, 0x01), waitTime);
                 //WT901C485.SendProtocolData(new byte[] { 50, 03, 00, 03, 00, 01, 79, 8B }, waitTime);
 
-                string reg03Value = WT901C485.GetDeviceData("03");
+                short? reg03Value = WT901C485.GetDeviceData(new ShortKey("03"));
                 MessageBox.Show($"寄存器03值为 : {reg03Value}");
             }
             catch (Exception ex)
