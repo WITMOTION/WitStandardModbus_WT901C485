@@ -101,6 +101,7 @@ class DeviceModel:
         # modbus ID 设备地址
         self.ADDR = ADDR
         self.deviceData = {}
+        # 数据回调方法 Data callback method
         self.callback_method = callback_method
 
     # 获得CRC校验 Obtain CRC verification
@@ -205,29 +206,58 @@ class DeviceModel:
 
     # 数据解析 data analysis
     def processData(self, length):
-        # 从读取指令中获得起始寄存器 Obtain start register from read instruction
-        if self.statReg is not None:
-            for i in range(int(length / 2)):
-                # 寄存器数据 Register data
-                value = self.TempBytes[2 * i + 3] << 8 | self.TempBytes[2 * i + 4]
-                # 振动角度解析 Analysis of vibration angle
-                if 0x3D <= self.statReg <= 0x3F:
-                    value = value / 32768 * 180
-                    self.set(str(self.statReg), value)
-                    self.statReg += 1
-                # 温度解析 Temperature analysis
-                elif self.statReg == 0x40:
-                    value = value / 100
-                    self.set(str(self.statReg), value)
-                    self.statReg += 1
-                # 其他 other
-                else:
-                    self.set(str(self.statReg), value)
-                    self.statReg += 1
-            self.TempBytes.clear()
+        # 　数据解析
+        if length == 24:
+            AccX = self.getSignInt16(self.TempBytes[3] << 8 | self.TempBytes[4]) / 32768 * 16
+            AccY = self.getSignInt16(self.TempBytes[5] << 8 | self.TempBytes[5]) / 32768 * 16
+            AccZ = self.getSignInt16(self.TempBytes[7] << 8 | self.TempBytes[8]) / 32768 * 16
+            self.set("AccX", round(AccX, 3))
+            self.set("AccY", round(AccY, 3))
+            self.set("AccZ", round(AccZ, 3))
+
+            AsX = self.getSignInt16(self.TempBytes[9] << 8 | self.TempBytes[10]) / 32768 * 2000
+            AsY = self.getSignInt16(self.TempBytes[11] << 8 | self.TempBytes[12]) / 32768 * 2000
+            AsZ = self.getSignInt16(self.TempBytes[13] << 8 | self.TempBytes[14]) / 32768 * 2000
+            self.set("AsX", round(AsX, 3))
+            self.set("AsY", round(AsY, 3))
+            self.set("AsZ", round(AsZ, 3))
+
+            HX = self.getSignInt16(self.TempBytes[15] << 8 | self.TempBytes[16]) * 13 / 1000
+            HY = self.getSignInt16(self.TempBytes[17] << 8 | self.TempBytes[18]) * 13 / 1000
+            HZ = self.getSignInt16(self.TempBytes[19] << 8 | self.TempBytes[20]) * 13 / 1000
+            self.set("HX", round(HX, 3))
+            self.set("HY", round(HY, 3))
+            self.set("HZ", round(HZ, 3))
+
+            AngX = self.getSignInt16(self.TempBytes[21] << 8 | self.TempBytes[22]) / 32768 * 180
+            AngY = self.getSignInt16(self.TempBytes[23] << 8 | self.TempBytes[24]) / 32768 * 180
+            AngZ = self.getSignInt16(self.TempBytes[25] << 8 | self.TempBytes[26]) / 32768 * 180
+            self.set("AngX", round(AngX, 3))
+            self.set("AngY", round(AngY, 3))
+            self.set("AngZ", round(AngZ, 3))
             self.callback_method(self)
+        else:
+            if self.statReg is not None:
+                for i in range(int(length / 2)):
+                    value = self.getSignInt16(self.TempBytes[2 * i + 3] << 8 | self.TempBytes[2 * i + 4])
+                    value = value / 32768
+                    self.set(str(self.statReg), round(value, 3))
+                    self.statReg += 1
+        self.TempBytes.clear()
 
     # endregion
+
+    @staticmethod
+    def getSignInt16(num):
+        if num >= pow(2, 15):
+            num -= pow(2, 16)
+        return num
+
+    @staticmethod
+    def getSignInt32(num):
+        if num >= pow(2, 31):
+            num -= pow(2, 32)
+        return num
 
     # 发送串口数据 Sending serial port data
     def sendData(self, data):
@@ -316,7 +346,7 @@ class DeviceModel:
     def loopRead(self):
         print("循环读取开始")
         while self.loop:
-            self.readReg(0x3A, 13)
+            self.readReg(0x34, 12)
             time.sleep(0.2)
         print("循环读取结束")
 
