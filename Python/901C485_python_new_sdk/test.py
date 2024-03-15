@@ -4,7 +4,9 @@ import time
 
 # 数据更新事件  Data update event
 def updateData(DeviceModel):
-    print(DeviceModel.deviceName + " : " + DeviceModel.deviceData)
+    print(DeviceModel.deviceData)
+    # 获得加速度X的值 Obtain the value of acceleration X
+    # print(DeviceModel.get("AccX"))
 
 
 if __name__ == "__main__":
