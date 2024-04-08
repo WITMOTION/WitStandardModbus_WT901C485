@@ -134,7 +134,7 @@ namespace Wit.SDK.Modular.Sensor.Modular.DataProcessor.Role
         /// <summary>
         /// 当传感器关闭时
         /// </summary>
-        public override void OnClose()
+        public override void OnClose(DeviceModel deviceModel)
         {
             ReadDataThreadRuning = false;
         }
