@@ -21,8 +21,8 @@ class DeviceModel:
     # 设备名称 deviceName
     deviceName = "我的设备"
 
-    # 设备modbus ID
-    ADDR = 0x50
+    # 设备modbus ID列表
+    addrLis = []
 
     # 设备数据字典 Device Data Dictionary
     deviceData = {}
@@ -90,7 +90,7 @@ class DeviceModel:
 
     # endregion  计算CRC
 
-    def __init__(self, deviceName, portName, baud, ADDR, callback_method):
+    def __init__(self, deviceName, portName, baud, addrLis, callback_method):
         print("初始化设备模型")
         # 设备名称（自定义） Device Name
         self.deviceName = deviceName
@@ -99,10 +99,13 @@ class DeviceModel:
         # 串口波特率 baud
         self.serialConfig.baud = baud
         # modbus ID 设备地址
-        self.ADDR = ADDR
+        self.addrLis = addrLis
         self.deviceData = {}
         # 数据回调方法 Data callback method
         self.callback_method = callback_method
+        # 初始化设备数据字典 Initialize device data dictionary
+        for addr in addrLis:
+            self.deviceData[addr] = {}
 
     # 获得CRC校验 Obtain CRC verification
     def get_crc(self, datas, dlen):
@@ -118,22 +121,27 @@ class DeviceModel:
     # region 获取设备数据 Obtain device data
 
     # 设置设备数据 Set device data
-    def set(self, key, value):
+    def set(self, ADDR, key, value):
         # 将设备数据存到键值 Saving device data to key values
-        self.deviceData[key] = value
+        self.deviceData[ADDR][key] = value
 
     # 获得设备数据 Obtain device data
-    def get(self, key):
+    def get(self, ADDR, key):
         # 从键值中获取数据，没有则返回None Obtaining data from key values
-        if key in self.deviceData:
-            return self.deviceData[key]
+        if ADDR in self.deviceData:
+            if key in self.deviceData[ADDR]:
+                return self.deviceData[ADDR][key]
+            else:
+                return None
         else:
             return None
 
     # 删除设备数据 Delete device data
-    def remove(self, key):
+    def remove(self, ADDR, key):
         # 删除设备键值
-        del self.deviceData[key]
+        if ADDR in self.deviceData:
+            if key in self.deviceData[ADDR]:
+                del self.deviceData[ADDR][key]
 
     # endregion
 
@@ -177,7 +185,7 @@ class DeviceModel:
             print("端口关闭了")
         self.isOpen = False
         print("设备关闭了")
-
+    
     # region 数据解析 data analysis
 
     # 串口数据处理  Serial port data processing
@@ -186,7 +194,7 @@ class DeviceModel:
         for val in tempdata:
             self.TempBytes.append(val)
             # 判断ID是否正确 Determine if the ID is correct
-            if self.TempBytes[0] != self.ADDR:
+            if self.TempBytes[0] not in self.addrLis:
                 del self.TempBytes[0]
                 continue
             # 判断是否是03读取功能码 Determine whether it is 03 to read the function code
@@ -207,41 +215,42 @@ class DeviceModel:
     # 数据解析 data analysis
     def processData(self, length):
         # 　数据解析
+        ADDR = self.TempBytes[0]
         if length == 24:
             AccX = self.getSignInt16(self.TempBytes[3] << 8 | self.TempBytes[4]) / 32768 * 16
             AccY = self.getSignInt16(self.TempBytes[5] << 8 | self.TempBytes[5]) / 32768 * 16
             AccZ = self.getSignInt16(self.TempBytes[7] << 8 | self.TempBytes[8]) / 32768 * 16
-            self.set("AccX", round(AccX, 3))
-            self.set("AccY", round(AccY, 3))
-            self.set("AccZ", round(AccZ, 3))
+            self.set(ADDR, "AccX", round(AccX, 3))
+            self.set(ADDR, "AccY", round(AccY, 3))
+            self.set(ADDR, "AccZ", round(AccZ, 3))
 
             AsX = self.getSignInt16(self.TempBytes[9] << 8 | self.TempBytes[10]) / 32768 * 2000
             AsY = self.getSignInt16(self.TempBytes[11] << 8 | self.TempBytes[12]) / 32768 * 2000
             AsZ = self.getSignInt16(self.TempBytes[13] << 8 | self.TempBytes[14]) / 32768 * 2000
-            self.set("AsX", round(AsX, 3))
-            self.set("AsY", round(AsY, 3))
-            self.set("AsZ", round(AsZ, 3))
+            self.set(ADDR, "AsX", round(AsX, 3))
+            self.set(ADDR, "AsY", round(AsY, 3))
+            self.set(ADDR, "AsZ", round(AsZ, 3))
 
             HX = self.getSignInt16(self.TempBytes[15] << 8 | self.TempBytes[16]) * 13 / 1000
             HY = self.getSignInt16(self.TempBytes[17] << 8 | self.TempBytes[18]) * 13 / 1000
             HZ = self.getSignInt16(self.TempBytes[19] << 8 | self.TempBytes[20]) * 13 / 1000
-            self.set("HX", round(HX, 3))
-            self.set("HY", round(HY, 3))
-            self.set("HZ", round(HZ, 3))
+            self.set(ADDR, "HX", round(HX, 3))
+            self.set(ADDR, "HY", round(HY, 3))
+            self.set(ADDR, "HZ", round(HZ, 3))
 
             AngX = self.getSignInt16(self.TempBytes[21] << 8 | self.TempBytes[22]) / 32768 * 180
             AngY = self.getSignInt16(self.TempBytes[23] << 8 | self.TempBytes[24]) / 32768 * 180
             AngZ = self.getSignInt16(self.TempBytes[25] << 8 | self.TempBytes[26]) / 32768 * 180
-            self.set("AngX", round(AngX, 3))
-            self.set("AngY", round(AngY, 3))
-            self.set("AngZ", round(AngZ, 3))
+            self.set(ADDR, "AngX", round(AngX, 3))
+            self.set(ADDR, "AngY", round(AngY, 3))
+            self.set(ADDR, "AngZ", round(AngZ, 3))
             self.callback_method(self)
         else:
             if self.statReg is not None:
                 for i in range(int(length / 2)):
                     value = self.getSignInt16(self.TempBytes[2 * i + 3] << 8 | self.TempBytes[2 * i + 4])
                     value = value / 32768
-                    self.set(str(self.statReg), round(value, 3))
+                    self.set(ADDR, str(self.statReg), round(value, 3))
                     self.statReg += 1
         self.TempBytes.clear()
 
@@ -267,24 +276,24 @@ class DeviceModel:
             print(ex)
 
     # 读取寄存器 read register
-    def readReg(self, regAddr, regCount):
+    def readReg(self, ADDR, regAddr, regCount):
         # 从指令中获取起始寄存器 （处理回传数据需要用到） Get start register from instruction
         self.statReg = regAddr
         # 封装读取指令并向串口发送数据 Encapsulate read instructions and send data to the serial port
-        self.sendData(self.get_readBytes(self.ADDR, regAddr, regCount))
+        self.sendData(self.get_readBytes(ADDR, regAddr, regCount))
 
     # 写入寄存器 Write Register
-    def writeReg(self, regAddr, sValue):
+    def writeReg(self, ADDR, regAddr, sValue):
         # 解锁 unlock
-        self.unlock()
+        self.unlock(ADDR)
         # 延迟100ms Delay 100ms
         time.sleep(0.1)
         # 封装写入指令并向串口发送数据
-        self.sendData(self.get_writeBytes(self.ADDR, regAddr, sValue))
+        self.sendData(self.get_writeBytes(ADDR, regAddr, sValue))
         # 延迟100ms Delay 100ms
         time.sleep(0.1)
         # 保存 save
-        self.save()
+        self.save(ADDR)
 
     # 发送读取指令封装 Send read instruction encapsulation
     def get_readBytes(self, devid, regAddr, regCount):
@@ -346,8 +355,9 @@ class DeviceModel:
     def loopRead(self):
         print("循环读取开始")
         while self.loop:
-            self.readReg(0x34, 12)
-            time.sleep(0.2)
+            for addr in self.addrLis:
+                self.readReg(addr, 0x34, 12)
+                time.sleep(0.2)
         print("循环读取结束")
 
     # 关闭循环读取 Close loop reading
@@ -355,11 +365,11 @@ class DeviceModel:
         self.loop = False
 
     # 解锁
-    def unlock(self):
-        cmd = self.get_writeBytes(self.ADDR, 0x69, 0xb588)
+    def unlock(self, ADDR):
+        cmd = self.get_writeBytes(ADDR, 0x69, 0xb588)
         self.sendData(cmd)
 
     # 保存
-    def save(self):
-        cmd = self.get_writeBytes(self.ADDR, 0x00, 0x0000)
+    def save(self, ADDR):
+        cmd = self.get_writeBytes(ADDR, 0x00, 0x0000)
         self.sendData(cmd)
