@@ -218,7 +218,7 @@ class DeviceModel:
         ADDR = self.TempBytes[0]
         if length == 24:
             AccX = self.getSignInt16(self.TempBytes[3] << 8 | self.TempBytes[4]) / 32768 * 16
-            AccY = self.getSignInt16(self.TempBytes[5] << 8 | self.TempBytes[5]) / 32768 * 16
+            AccY = self.getSignInt16(self.TempBytes[5] << 8 | self.TempBytes[6]) / 32768 * 16
             AccZ = self.getSignInt16(self.TempBytes[7] << 8 | self.TempBytes[8]) / 32768 * 16
             self.set(ADDR, "AccX", round(AccX, 3))
             self.set(ADDR, "AccY", round(AccY, 3))
